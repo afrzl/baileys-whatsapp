@@ -152,4 +152,86 @@ MessageController.getContacts = (0, middleware_1.asyncHandler)(async (req, res) 
         });
     }
 });
+MessageController.sendPoll = (0, middleware_1.asyncHandler)(async (req, res) => {
+    const { sessionId } = req.params;
+    const { jid, type, name, options, selectableCount = 1 } = req.body;
+    const sessions = services_1.WhatsAppService.getSessions();
+    const sessionData = sessions.get(sessionId);
+    if (!sessionData || !sessionData.isAuthenticated) {
+        return res.status(400).json({
+            success: false,
+            message: 'Session not found or not authenticated'
+        });
+    }
+    if (!jid || !name || !options || !Array.isArray(options)) {
+        return res.status(400).json({
+            success: false,
+            message: 'JID, poll name, and options array are required'
+        });
+    }
+    if (options.length < 2 || options.length > 12) {
+        return res.status(400).json({
+            success: false,
+            message: 'Poll must have between 2 and 12 options'
+        });
+    }
+    if (selectableCount < 1 || selectableCount > options.length) {
+        return res.status(400).json({
+            success: false,
+            message: 'Selectable count must be between 1 and the number of options'
+        });
+    }
+    try {
+        let targetJid = jid;
+        if (type === 'number') {
+            targetJid = (0, utils_1.formatPhoneNumber)(jid);
+        }
+        if (!targetJid.endsWith('@g.us')) {
+            return res.status(400).json({
+                success: false,
+                message: 'Polls can only be sent to groups'
+            });
+        }
+        const result = await services_1.WhatsAppService.sendPoll(sessionId, targetJid, name, options, selectableCount);
+        res.json({
+            success: true,
+            data: result
+        });
+    }
+    catch (error) {
+        console.error('Error sending poll:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send poll',
+            error: error.message
+        });
+    }
+});
+MessageController.getGroups = (0, middleware_1.asyncHandler)(async (req, res) => {
+    const { sessionId } = req.params;
+    const sessions = services_1.WhatsAppService.getSessions();
+    const sessionData = sessions.get(sessionId);
+    if (!sessionData || !sessionData.isAuthenticated) {
+        return res.status(400).json({
+            success: false,
+            message: 'Session not found or not authenticated'
+        });
+    }
+    try {
+        const groups = await services_1.WhatsAppService.getGroups(sessionId);
+        res.json({
+            success: true,
+            data: groups,
+            count: groups.length
+        });
+    }
+    catch (error) {
+        console.error('Error fetching groups:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch groups',
+            error: error.message
+        });
+    }
+});
 //# sourceMappingURL=messageController.js.map

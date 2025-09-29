@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { 
   SendMessageRequest, 
   BulkMessageRequest,
-  ChatHistoryQuery 
+  ChatHistoryQuery,
+  PollRequest
 } from '@/types';
 import { WhatsAppService, DatabaseService } from '@/services';
 import { formatPhoneNumber, extractPhoneNumber, sleep } from '@/utils';
@@ -203,6 +204,117 @@ export class MessageController {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch contacts',
+        error: (error as Error).message
+      });
+    }
+  });
+
+  /**
+   * POST /:sessionId/messages/poll - Send poll message to group
+   */
+  static sendPoll = asyncHandler(async (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+    const { jid, type, name, options, selectableCount = 1 }: PollRequest = req.body;
+    
+    const sessions = WhatsAppService.getSessions();
+    const sessionData = sessions.get(sessionId);
+    
+    if (!sessionData || !sessionData.isAuthenticated) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session not found or not authenticated'
+      });
+    }
+    
+    // Validate required fields
+    if (!jid || !name || !options || !Array.isArray(options)) {
+      return res.status(400).json({
+        success: false,
+        message: 'JID, poll name, and options array are required'
+      });
+    }
+    
+    // Validate options array
+    if (options.length < 2 || options.length > 12) {
+      return res.status(400).json({
+        success: false,
+        message: 'Poll must have between 2 and 12 options'
+      });
+    }
+    
+    // Validate selectable count
+    if (selectableCount < 1 || selectableCount > options.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selectable count must be between 1 and the number of options'
+      });
+    }
+    
+    try {
+      let targetJid = jid;
+      if (type === 'number') {
+        targetJid = formatPhoneNumber(jid);
+      }
+      
+      // Check if it's a group JID (groups end with @g.us)
+      if (!targetJid.endsWith('@g.us')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Polls can only be sent to groups'
+        });
+      }
+      
+      const result = await WhatsAppService.sendPoll(
+        sessionId,
+        targetJid,
+        name,
+        options,
+        selectableCount
+      );
+      
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('Error sending poll:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send poll',
+        error: (error as Error).message
+      });
+    }
+  });
+
+  /**
+   * GET /:sessionId/groups - Get list of groups
+   */
+  static getGroups = asyncHandler(async (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+    
+    const sessions = WhatsAppService.getSessions();
+    const sessionData = sessions.get(sessionId);
+    
+    if (!sessionData || !sessionData.isAuthenticated) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session not found or not authenticated'
+      });
+    }
+    
+    try {
+      const groups = await WhatsAppService.getGroups(sessionId);
+      
+      res.json({
+        success: true,
+        data: groups,
+        count: groups.length
+      });
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch groups',
         error: (error as Error).message
       });
     }

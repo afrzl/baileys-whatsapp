@@ -18,6 +18,20 @@ app.use(middleware_1.corsHeaders);
 app.use('/', routes_1.sessionRoutes);
 app.use('/', routes_1.messageRoutes);
 app.use('/', routes_1.legacyRoutes);
+console.log('=== REGISTERED ROUTES ===');
+app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+        console.log(`${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
+    }
+    else if (middleware.name === 'router') {
+        middleware.handle.stack.forEach((handler) => {
+            if (handler.route) {
+                console.log(`${Object.keys(handler.route.methods).join(',').toUpperCase()} ${handler.route.path}`);
+            }
+        });
+    }
+});
+console.log('========================');
 app.use(middleware_1.notFoundHandler);
 app.use(middleware_1.errorHandler);
 const PORT = process.env.PORT || 3000;

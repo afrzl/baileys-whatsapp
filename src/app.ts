@@ -28,6 +28,21 @@ app.use('/', sessionRoutes);
 app.use('/', messageRoutes);
 app.use('/', legacyRoutes);
 
+// Debug: List all registered routes
+console.log('=== REGISTERED ROUTES ===');
+app._router.stack.forEach((middleware: any) => {
+  if (middleware.route) {
+    console.log(`${Object.keys(middleware.route.methods).join(',').toUpperCase()} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    middleware.handle.stack.forEach((handler: any) => {
+      if (handler.route) {
+        console.log(`${Object.keys(handler.route.methods).join(',').toUpperCase()} ${handler.route.path}`);
+      }
+    });
+  }
+});
+console.log('========================');
+
 // Error handling middleware
 app.use(notFoundHandler);
 app.use(errorHandler);

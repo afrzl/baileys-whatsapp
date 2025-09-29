@@ -348,6 +348,88 @@ export class WhatsAppService {
   }
 
   /**
+   * Send poll message to group
+   * @param sessionId - Session identifier
+   * @param jid - Group JID
+   * @param name - Poll question/name
+   * @param options - Poll options array
+   * @param selectableCount - Number of options user can select
+   * @returns Message result
+   */
+  static async sendPoll(
+    sessionId: string,
+    jid: string,
+    name: string,
+    options: string[],
+    selectableCount: number = 1
+  ) {
+    const sessionData = this.sessions.get(sessionId);
+    if (!sessionData || !sessionData.isAuthenticated || !sessionData.socket) {
+      throw new Error('Session not found or not authenticated');
+    }
+
+    // Create poll message
+    const pollMessage = {
+      poll: {
+        name: name,
+        values: options,
+        selectableCount: selectableCount
+      }
+    };
+
+    const result = await sessionData.socket.sendMessage(jid, pollMessage);
+    
+    // Save to database
+    const phoneNumber = extractPhoneNumber(jid);
+    const messageText = `Poll: ${name} - Options: ${options.join(', ')}`;
+    await DatabaseService.saveChatHistory(
+      sessionId, 
+      phoneNumber, 
+      messageText, 
+      'poll', 
+      'outgoing'
+    );
+    
+    return result;
+  }
+
+  /**
+   * Get list of groups that the bot is a member of
+   * @param sessionId - Session identifier
+   * @returns Array of group information
+   */
+  static async getGroups(sessionId: string) {
+    const sessionData = this.sessions.get(sessionId);
+    if (!sessionData || !sessionData.isAuthenticated || !sessionData.socket) {
+      throw new Error('Session not found or not authenticated');
+    }
+
+    try {
+      // Get all chats
+      const chats = await sessionData.socket.groupFetchAllParticipating();
+      
+      // Format group information
+      const groups = Object.values(chats).map(group => ({
+        jid: group.id,
+        name: group.subject,
+        description: group.desc || '',
+        participantsCount: group.participants?.length || 0,
+        isAdmin: group.participants?.some(p => 
+          p.id === sessionData.socket?.user?.id && 
+          (p.admin === 'admin' || p.admin === 'superadmin')
+        ) || false,
+        createdAt: group.creation ? new Date(group.creation * 1000) : null,
+        owner: group.owner || null
+      }));
+
+      return groups;
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      throw new Error('Failed to fetch groups');
+    }
+  }
+
+  /**
    * Delete session and cleanup
    * @param sessionId - Session identifier
    */

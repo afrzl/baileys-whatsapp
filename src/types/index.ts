@@ -45,6 +45,14 @@ export interface BulkMessageRequest extends SendMessageRequest {
   delay?: number;
 }
 
+export interface PollRequest {
+  jid: string;
+  type: 'number' | 'jid';
+  name: string;
+  options: string[];
+  selectableCount?: number;
+}
+
 export interface ChatHistoryMessage {
   id: number;
   sessionId: string;
@@ -56,7 +64,7 @@ export interface ChatHistoryMessage {
   timestamp: Date;
 }
 
-export type MessageType = 'text' | 'image' | 'document' | 'audio' | 'unknown';
+export type MessageType = 'text' | 'image' | 'document' | 'audio' | 'poll' | 'unknown';
 export type MessageDirection = 'incoming' | 'outgoing';
 
 // Database Types

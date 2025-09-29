@@ -243,6 +243,48 @@ class WhatsAppService {
         await database_1.DatabaseService.saveChatHistory(sessionId, phoneNumber, messageText, 'text', 'outgoing');
         return result;
     }
+    static async sendPoll(sessionId, jid, name, options, selectableCount = 1) {
+        const sessionData = this.sessions.get(sessionId);
+        if (!sessionData || !sessionData.isAuthenticated || !sessionData.socket) {
+            throw new Error('Session not found or not authenticated');
+        }
+        const pollMessage = {
+            poll: {
+                name: name,
+                values: options,
+                selectableCount: selectableCount
+            }
+        };
+        const result = await sessionData.socket.sendMessage(jid, pollMessage);
+        const phoneNumber = (0, utils_1.extractPhoneNumber)(jid);
+        const messageText = `Poll: ${name} - Options: ${options.join(', ')}`;
+        await database_1.DatabaseService.saveChatHistory(sessionId, phoneNumber, messageText, 'poll', 'outgoing');
+        return result;
+    }
+    static async getGroups(sessionId) {
+        const sessionData = this.sessions.get(sessionId);
+        if (!sessionData || !sessionData.isAuthenticated || !sessionData.socket) {
+            throw new Error('Session not found or not authenticated');
+        }
+        try {
+            const chats = await sessionData.socket.groupFetchAllParticipating();
+            const groups = Object.values(chats).map(group => ({
+                jid: group.id,
+                name: group.subject,
+                description: group.desc || '',
+                participantsCount: group.participants?.length || 0,
+                isAdmin: group.participants?.some(p => p.id === sessionData.socket?.user?.id &&
+                    (p.admin === 'admin' || p.admin === 'superadmin')) || false,
+                createdAt: group.creation ? new Date(group.creation * 1000) : null,
+                owner: group.owner || null
+            }));
+            return groups;
+        }
+        catch (error) {
+            console.error('Error fetching groups:', error);
+            throw new Error('Failed to fetch groups');
+        }
+    }
     static async deleteSession(sessionId) {
         const sessionData = this.sessions.get(sessionId);
         if (sessionData) {

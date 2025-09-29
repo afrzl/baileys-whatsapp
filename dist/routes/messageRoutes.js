@@ -6,8 +6,15 @@ const controllers_1 = require("@/controllers");
 const middleware_1 = require("@/middleware");
 const router = (0, express_1.Router)();
 exports.messageRoutes = router;
+console.log('MessageRoutes: Setting up routes...');
 router.post('/:sessionId/messages/send', middleware_1.authenticateApiKey, controllers_1.MessageController.sendMessage);
 router.post('/:sessionId/messages/send/bulk', middleware_1.authenticateApiKey, controllers_1.MessageController.sendBulkMessages);
+router.post('/:sessionId/messages/poll', middleware_1.authenticateApiKey, controllers_1.MessageController.sendPoll);
 router.get('/:sessionId/chats/:jid?', middleware_1.authenticateApiKey, controllers_1.MessageController.getChatHistory);
 router.get('/:sessionId/contacts', middleware_1.authenticateApiKey, controllers_1.MessageController.getContacts);
+console.log('About to register groups route...');
+console.log('MessageController.getGroups exists:', typeof controllers_1.MessageController.getGroups);
+router.get('/:sessionId/groups', middleware_1.authenticateApiKey, controllers_1.MessageController.getGroups);
+console.log('Groups route registered successfully');
+console.log('MessageRoutes: Groups route registered at /:sessionId/groups');
 //# sourceMappingURL=messageRoutes.js.map
