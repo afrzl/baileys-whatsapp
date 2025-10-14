@@ -49,12 +49,13 @@ class WhatsAppService {
             const socket = (0, baileys_1.makeWASocket)({
                 auth: state,
                 logger,
-                printQRInTerminal: false,
-                browser: ['WhatsApp Multi-Session API', 'Chrome', '3.0.0'],
+                printQRInTerminal: true,
+                browser: ['wa.dewakoding.com', 'Chrome', '87'],
+                version: [2, 3000, 1025190524],
                 defaultQueryTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000,
                 connectTimeoutMs: 60000,
-                qrTimeout: 40000,
+                qrTimeout: 60000,
                 emitOwnEvents: true,
                 fireInitQueries: true,
                 generateHighQualityLinkPreview: true,
@@ -303,14 +304,14 @@ class WhatsAppService {
             await database_1.DatabaseService.updateSessionStatus(sessionId, 'logged_out');
         }
     }
-    static async waitForQR(sessionId, maxAttempts = 20) {
+    static async waitForQR(sessionId, maxAttempts = 40) {
         let attempts = 0;
         return new Promise((resolve) => {
             const checkQR = () => {
                 const session = this.sessions.get(sessionId);
                 const qr = this.sessionQRs.get(sessionId);
                 if (qr) {
-                    console.log(`[${sessionId}] QR code found after ${attempts * 500}ms`);
+                    console.log(`[${sessionId}] QR code found after ${attempts * 1000}ms`);
                     resolve(qr);
                 }
                 else if (session && session.isAuthenticated) {
@@ -319,10 +320,10 @@ class WhatsAppService {
                 }
                 else if (attempts < maxAttempts) {
                     attempts++;
-                    setTimeout(checkQR, 500);
+                    setTimeout(checkQR, 1000);
                 }
                 else {
-                    console.log(`[${sessionId}] QR wait timeout after ${maxAttempts * 500}ms`);
+                    console.log(`[${sessionId}] QR wait timeout after ${maxAttempts * 1000}ms`);
                     resolve(null);
                 }
             };

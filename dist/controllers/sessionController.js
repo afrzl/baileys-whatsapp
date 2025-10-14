@@ -154,25 +154,43 @@ SessionController.addSession = (0, middleware_1.asyncHandler)(async (req, res) =
             const currentStatus = (0, utils_1.getSessionStatus)(sessionId, sessions);
             const session = sessions.get(sessionId);
             console.log(`[${sessionId}] QR generation timeout. Current status: ${currentStatus}`);
-            return res.json({
+            return res.status(408).json({
                 success: false,
-                message: 'QR code generation timeout. Check your internet connection and try again.',
+                message: 'QR code generation timeout. The connection might be slow or there might be network issues. Try again or check your internet connection.',
                 sessionId: sessionId,
                 status: currentStatus,
+                retry: {
+                    available: true,
+                    message: 'You can retry by calling this endpoint again',
+                    recommendation: 'Wait a few seconds before retrying'
+                },
                 debug: {
                     hasSession: !!session,
                     hasSocket: !!session?.socket,
-                    hasWebSocket: !!session?.socket?.ws
+                    hasWebSocket: !!session?.socket?.ws,
+                    timeoutAfter: '40 seconds',
+                    suggestion: 'Try deleting and recreating the session if this persists'
                 }
             });
         }
     }
     catch (error) {
         console.error(`Error adding session:`, error);
+        try {
+            await services_1.WhatsAppService.deleteSession(sessionId);
+        }
+        catch (cleanupError) {
+            console.error(`Error cleaning up failed session ${sessionId}:`, cleanupError);
+        }
         res.status(500).json({
             success: false,
             message: 'Failed to add session',
-            error: error.message
+            error: error.message,
+            sessionId: sessionId,
+            retry: {
+                available: true,
+                message: 'Session has been cleaned up, you can try again'
+            }
         });
     }
 });

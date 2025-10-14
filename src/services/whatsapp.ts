@@ -91,12 +91,13 @@ export class WhatsAppService {
       const socket = makeWASocket({
         auth: state,
         logger,
-        printQRInTerminal: false,
-        browser: ['WhatsApp Multi-Session API', 'Chrome', '3.0.0'],
+        printQRInTerminal: true,
+        browser: ['wa.dewakoding.com', 'Chrome', '87'],
+        version: [2, 3000, 1025190524],
         defaultQueryTimeoutMs: 60000,
         keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,
-        qrTimeout: 40000,
+        qrTimeout: 60000,
         emitOwnEvents: true,
         fireInitQueries: true,
         generateHighQualityLinkPreview: true,
@@ -463,7 +464,7 @@ export class WhatsAppService {
    */
   static async waitForQR(
     sessionId: string, 
-    maxAttempts: number = 20
+    maxAttempts: number = 40
   ): Promise<string | 'authenticated' | null> {
     let attempts = 0;
     
@@ -473,16 +474,16 @@ export class WhatsAppService {
         const qr = this.sessionQRs.get(sessionId);
         
         if (qr) {
-          console.log(`[${sessionId}] QR code found after ${attempts * 500}ms`);
+          console.log(`[${sessionId}] QR code found after ${attempts * 1000}ms`);
           resolve(qr);
         } else if (session && session.isAuthenticated) {
           console.log(`[${sessionId}] Session authenticated while waiting for QR`);
           resolve('authenticated');
         } else if (attempts < maxAttempts) {
           attempts++;
-          setTimeout(checkQR, 500);
+          setTimeout(checkQR, 1000);
         } else {
-          console.log(`[${sessionId}] QR wait timeout after ${maxAttempts * 500}ms`);
+          console.log(`[${sessionId}] QR wait timeout after ${maxAttempts * 1000}ms`);
           resolve(null);
         }
       };
