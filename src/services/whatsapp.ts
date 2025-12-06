@@ -92,7 +92,7 @@ export class WhatsAppService {
         auth: state,
         logger,
         printQRInTerminal: true,
-        browser: ['wa.dewakoding.com', 'Chrome', '87'],
+        browser: ['Chrome (Linux)', 'Chrome', '120.0.6099.109'],
         version: [2, 3000, 1025190524],
         defaultQueryTimeoutMs: 60000,
         keepAliveIntervalMs: 30000,
@@ -106,6 +106,14 @@ export class WhatsAppService {
         markOnlineOnConnect: false,
         retryRequestDelayMs: 250,
         maxMsgRetryCount: 5,
+        getMessage: async (key) => {
+          return {
+            conversation: 'Hello'
+          }
+        },
+        patchMessageBeforeSending: (message) => {
+          return message;
+        },
         appStateMacVerification: {
           patch: true,
           snapshot: true
