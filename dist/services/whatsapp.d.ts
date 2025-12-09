@@ -6,8 +6,8 @@ export declare class WhatsAppService {
     static getSessionQRs(): Map<string, string>;
     static createConnection(sessionId: string, options?: ConnectionOptions): Promise<SessionData>;
     private static setupEventHandlers;
-    static sendMessage(sessionId: string, jid: string, message: any, options?: any): Promise<import("@whiskeysockets/baileys").proto.WebMessageInfo | undefined>;
-    static sendPoll(sessionId: string, jid: string, name: string, options: string[], selectableCount?: number): Promise<import("@whiskeysockets/baileys").proto.WebMessageInfo | undefined>;
+    static sendMessage(sessionId: string, jid: string, message: any, options?: any): Promise<import("@whiskeysockets/baileys").WAMessage | undefined>;
+    static sendPoll(sessionId: string, jid: string, name: string, options: string[], selectableCount?: number): Promise<import("@whiskeysockets/baileys").WAMessage | undefined>;
     static getGroups(sessionId: string): Promise<{
         jid: string;
         name: string;

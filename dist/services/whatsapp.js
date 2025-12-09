@@ -49,10 +49,9 @@ class WhatsAppService {
             const socket = (0, baileys_1.makeWASocket)({
                 auth: state,
                 logger,
-                printQRInTerminal: true,
-                browser: ['wa.dewakoding.com', 'Chrome', '87'],
-                version: [2, 3000, 1025190524],
-                defaultQueryTimeoutMs: 60000,
+                browser: ['Chrome (Linux)', '', ''],
+                version: [2, 3000, 1029620931],
+                defaultQueryTimeoutMs: undefined,
                 keepAliveIntervalMs: 30000,
                 connectTimeoutMs: 60000,
                 qrTimeout: 60000,
@@ -61,13 +60,20 @@ class WhatsAppService {
                 generateHighQualityLinkPreview: true,
                 syncFullHistory: false,
                 shouldSyncHistoryMessage: () => false,
-                markOnlineOnConnect: false,
+                markOnlineOnConnect: true,
                 retryRequestDelayMs: 250,
-                maxMsgRetryCount: 5,
-                appStateMacVerification: {
-                    patch: true,
-                    snapshot: true
+                maxMsgRetryCount: 3,
+                getMessage: async (key) => {
+                    return {
+                        conversation: 'Hello'
+                    };
                 },
+                patchMessageBeforeSending: (message) => {
+                    return message;
+                },
+                shouldIgnoreJid: (jid) => false,
+                linkPreviewImageThumbnailWidth: 192,
+                transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
                 ...options
             });
             const sessionData = {

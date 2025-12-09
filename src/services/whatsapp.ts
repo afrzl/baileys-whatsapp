@@ -91,10 +91,9 @@ export class WhatsAppService {
       const socket = makeWASocket({
         auth: state,
         logger,
-        printQRInTerminal: true,
-        browser: ['Chrome (Linux)', 'Chrome', '120.0.6099.109'],
-        version: [2, 3000, 1025190524],
-        defaultQueryTimeoutMs: 60000,
+        browser: ['Chrome (Linux)', '', ''],
+        version: [2, 3000, 1029620931], // Stable version from issue #2132
+        defaultQueryTimeoutMs: undefined,
         keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,
         qrTimeout: 60000,
@@ -103,9 +102,9 @@ export class WhatsAppService {
         generateHighQualityLinkPreview: true,
         syncFullHistory: false,
         shouldSyncHistoryMessage: () => false,
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         retryRequestDelayMs: 250,
-        maxMsgRetryCount: 5,
+        maxMsgRetryCount: 3,
         getMessage: async (key) => {
           return {
             conversation: 'Hello'
@@ -114,10 +113,9 @@ export class WhatsAppService {
         patchMessageBeforeSending: (message) => {
           return message;
         },
-        appStateMacVerification: {
-          patch: true,
-          snapshot: true
-        },
+        shouldIgnoreJid: (jid: string) => false,
+        linkPreviewImageThumbnailWidth: 192,
+        transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 3000 },
         ...options
       });
 
