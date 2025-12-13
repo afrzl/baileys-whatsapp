@@ -105,11 +105,6 @@ export class WhatsAppService {
         markOnlineOnConnect: true,
         retryRequestDelayMs: 250,
         maxMsgRetryCount: 3,
-        getMessage: async (key) => {
-          return {
-            conversation: 'Hello'
-          }
-        },
         patchMessageBeforeSending: (message) => {
           return message;
         },
