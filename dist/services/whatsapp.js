@@ -50,7 +50,7 @@ class WhatsAppService {
                 auth: state,
                 logger,
                 browser: ['Chrome (Linux)', '', ''],
-                version: [2, 3000, 1029620931],
+                version: [2, 3000, 1033893291],
                 defaultQueryTimeoutMs: undefined,
                 keepAliveIntervalMs: 30000,
                 connectTimeoutMs: 60000,
@@ -63,11 +63,6 @@ class WhatsAppService {
                 markOnlineOnConnect: true,
                 retryRequestDelayMs: 250,
                 maxMsgRetryCount: 3,
-                getMessage: async (key) => {
-                    return {
-                        conversation: 'Hello'
-                    };
-                },
                 patchMessageBeforeSending: (message) => {
                     return message;
                 },

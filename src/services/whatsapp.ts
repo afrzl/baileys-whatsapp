@@ -92,7 +92,7 @@ export class WhatsAppService {
         auth: state,
         logger,
         browser: ['Chrome (Linux)', '', ''],
-        version: [2, 3000, 1029620931], // Stable version from issue #2132
+        version: [2, 3000, 1033893291], // Fixed version for 405 error (from issue #2370)
         defaultQueryTimeoutMs: undefined,
         keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,

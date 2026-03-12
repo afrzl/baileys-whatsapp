@@ -28,7 +28,7 @@ model AuthData {
   id          Int      @id @default(autoincrement())
   sessionId   String   
   key         String   // Key name (e.g., 'creds.json', 'app-state-sync-version-critical_block.json')
-  value       String   @db.Text // JSON string value - using TEXT for large data
+  value       String   @db.LongText // JSON string value - using LONGTEXT for large auth data
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
