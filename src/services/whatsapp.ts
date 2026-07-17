@@ -1,6 +1,10 @@
 import { 
+  Browsers,
   DisconnectReason, 
+  fetchLatestBaileysVersion,
+  fetchLatestWaWebVersion,
   makeWASocket,
+  WAVersion,
   WASocket
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode';
@@ -26,6 +30,9 @@ const logger = P({ level: 'silent' });
 export class WhatsAppService {
   private static sessions = new Map<string, SessionData>();
   private static sessionQRs = new Map<string, string>();
+  private static reconnectAttempts = new Map<string, number>();
+  private static readonly maxReconnectAttempts = 3;
+  private static readonly fallbackWaWebVersion: WAVersion = [2, 3000, 1042951012];
 
   /**
    * Get all active sessions
@@ -74,6 +81,8 @@ export class WhatsAppService {
         this.sessions.delete(sessionId);
         this.sessionQRs.delete(sessionId);
       }
+
+      const waWebVersion = await this.getWaWebVersion(sessionId);
       
       // Clean up any existing auth folder (legacy cleanup)
       const authDir = `auth_info_${sessionId}`;
@@ -91,8 +100,8 @@ export class WhatsAppService {
       const socket = makeWASocket({
         auth: state,
         logger,
-        browser: ['Chrome (Linux)', '', ''],
-        version: [2, 3000, 1033893291], // Fixed version for 405 error (from issue #2370)
+        browser: Browsers.macOS('Chrome'),
+        version: waWebVersion,
         defaultQueryTimeoutMs: undefined,
         keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,
@@ -140,6 +149,51 @@ export class WhatsAppService {
   }
 
   /**
+   * Resolve the current WhatsApp Web version.
+   * 405 errors usually mean WhatsApp rejected an expired web version before QR generation.
+   */
+  private static async getWaWebVersion(sessionId: string): Promise<WAVersion> {
+    try {
+      const { version, isLatest, error } = await fetchLatestWaWebVersion();
+      if (isLatest) {
+        console.log(`[${sessionId}] Using latest WhatsApp Web version: ${version.join('.')}`);
+        return version;
+      }
+
+      console.warn(
+        `[${sessionId}] Could not confirm latest WhatsApp Web version, trying Baileys default source:`,
+        error instanceof Error ? error.message : error
+      );
+    } catch (error) {
+      console.warn(
+        `[${sessionId}] Failed to fetch WhatsApp Web version, trying Baileys default source:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    try {
+      const { version, isLatest, error } = await fetchLatestBaileysVersion();
+      if (isLatest) {
+        console.log(`[${sessionId}] Using latest Baileys version hint: ${version.join('.')}`);
+        return version;
+      }
+
+      console.warn(
+        `[${sessionId}] Could not confirm Baileys version hint, using fallback:`,
+        error instanceof Error ? error.message : error
+      );
+    } catch (error) {
+      console.warn(
+        `[${sessionId}] Failed to fetch Baileys version hint, using fallback:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    console.log(`[${sessionId}] Using fallback WhatsApp Web version: ${this.fallbackWaWebVersion.join('.')}`);
+    return this.fallbackWaWebVersion;
+  }
+
+  /**
    * Setup event handlers for WhatsApp socket
    * @param sessionId - Session identifier
    * @param socket - WhatsApp socket
@@ -154,10 +208,6 @@ export class WhatsAppService {
     saveCreds: () => Promise<void>,
     clearAuth: () => Promise<void>
   ): void {
-    // Track reconnection attempts
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 3;
-
     // Enhanced event handler for connection updates
     socket.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr, isNewLogin, isOnline } = update;
@@ -192,6 +242,7 @@ export class WhatsAppService {
       if (connection === 'close') {
         const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+        const reconnectAttempts = this.reconnectAttempts.get(sessionId) || 0;
         
         console.log(`[${sessionId}] Connection closed:`, {
           statusCode,
@@ -204,23 +255,26 @@ export class WhatsAppService {
         sessionData.isAuthenticated = false;
         this.sessionQRs.delete(sessionId);
         
-        if (shouldReconnect && reconnectAttempts < maxReconnectAttempts) {
-          reconnectAttempts++;
-          console.log(`[${sessionId}] Attempting reconnection ${reconnectAttempts}/${maxReconnectAttempts} in 5 seconds...`);
+        if (shouldReconnect && reconnectAttempts < this.maxReconnectAttempts) {
+          const nextAttempt = reconnectAttempts + 1;
+          this.reconnectAttempts.set(sessionId, nextAttempt);
+          console.log(`[${sessionId}] Attempting reconnection ${nextAttempt}/${this.maxReconnectAttempts} in 5 seconds...`);
           setTimeout(() => {
             console.log(`[${sessionId}] Reconnecting...`);
             this.createConnection(sessionId, {}).catch(error => {
               console.error(`[${sessionId}] Reconnection failed:`, error);
             });
           }, 5000);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
+        } else if (reconnectAttempts >= this.maxReconnectAttempts) {
           console.log(`[${sessionId}] Max reconnection attempts reached, stopping reconnection`);
           this.sessions.delete(sessionId);
           this.sessionQRs.delete(sessionId);
+          this.reconnectAttempts.delete(sessionId);
         } else {
           console.log(`[${sessionId}] Session logged out, cleaning up...`);
           this.sessions.delete(sessionId);
           this.sessionQRs.delete(sessionId);
+          this.reconnectAttempts.delete(sessionId);
           // Clear auth data from database on logout
           await clearAuth();
         }
@@ -230,7 +284,7 @@ export class WhatsAppService {
       } else if (connection === 'open') {
         console.log(`[${sessionId}] WhatsApp connection opened successfully`);
         sessionData.isAuthenticated = true;
-        reconnectAttempts = 0; // Reset reconnection attempts on successful connection
+        this.reconnectAttempts.delete(sessionId);
         this.sessionQRs.delete(sessionId);
         await DatabaseService.updateSessionStatus(sessionId, 'connected');
         
@@ -452,6 +506,7 @@ export class WhatsAppService {
       
       this.sessions.delete(sessionId);
       this.sessionQRs.delete(sessionId);
+      this.reconnectAttempts.delete(sessionId);
       
       await DatabaseService.updateSessionStatus(sessionId, 'logged_out');
     }

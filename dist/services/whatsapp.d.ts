@@ -2,9 +2,13 @@ import { SessionData, ConnectionOptions } from '@/types';
 export declare class WhatsAppService {
     private static sessions;
     private static sessionQRs;
+    private static reconnectAttempts;
+    private static readonly maxReconnectAttempts;
+    private static readonly fallbackWaWebVersion;
     static getSessions(): Map<string, SessionData>;
     static getSessionQRs(): Map<string, string>;
     static createConnection(sessionId: string, options?: ConnectionOptions): Promise<SessionData>;
+    private static getWaWebVersion;
     private static setupEventHandlers;
     static sendMessage(sessionId: string, jid: string, message: any, options?: any): Promise<import("@whiskeysockets/baileys").WAMessage | undefined>;
     static sendPoll(sessionId: string, jid: string, name: string, options: string[], selectableCount?: number): Promise<import("@whiskeysockets/baileys").WAMessage | undefined>;
